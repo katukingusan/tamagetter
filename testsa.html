@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+<meta charset="UTF-8">
+<title>タマゲッター</title>
+
+<style>
+
+.delete-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 15px;
+
+    padding: 25px;
+
+    box-shadow: 0 0 15px rgba(0,0,0,0.3);
+
+    text-align: center;
+}
+
+.delete-button {
+    padding: 3px 8px;
+    font-size: 12px;
+}
+
+body {
+    font-family: sans-serif;
+    max-width: 600px;
+    margin: 40px auto;
+}
+
+h1 {
+    text-align: center;
+}
+
+input {
+    width: 70%;
+    padding: 10px;
+    font-size: 16px;
+}
+
+button {
+    padding: 10px 15px;
+    cursor: pointer;
+}
+
+.post {
+    display: flex;
+    gap: 10px;
+    border-bottom: 1px solid #ddd;
+    padding: 15px 0;
+}
+
+.icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.name {
+    font-weight: bold;
+}
+
+.time {
+    color: gray;
+    font-size: 12px;
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+
+<h1>タマゲッター</h1>
+
+
+
+<div id="account">
+
+<p>名前を入力してください</p>
+
+<input id="nameInput" placeholder="名前">
+
+<br><br>
+
+<p>アイコンを選択してください</p>
+
+<input type="file" id="iconInput" accept="image/*">
+
+<br><br>
+
+<button onclick="createAccount()">開始</button>
+
+</div>
+
+
+
+
+
+<div id="sns" style="display:none;">
+
+<p id="username"></p>
+
+
+<input type="text" id="message" maxlength="100" placeholder="今何してる？" onkeydown="enterPost(event)">
+
+<p id="count">0 / 100</p>
+
+<button onclick="postMessage()">投稿</button>
+
+
+<hr>
+
+
+<div id="posts"></div>
+
+
+</div>
+
+
+
+
+<div id="deleteBox" class="delete-popup" style="display:none;">
+
+<p>本当に削除しますか？</p>
+
+<button onclick="yesDelete()">削除する</button>
+
+<button onclick="noDelete()">やめる</button>
+
+</div>
+
+
+
+
+
+<script>
+
+
+let name = localStorage.getItem("name");
+
+let icon = localStorage.getItem("icon");
+
+
+let savedPosts = JSON.parse(localStorage.getItem("posts")) || [];
+
+
+let deleteIndex = null;
+
+
+
+
+// 文字数カウント設定
+
+function setupCounter(){
+
+    const message = document.getElementById("message");
+
+
+    message.addEventListener("input", function(){
+
+        document.getElementById("count").textContent =
+        message.value.length + " / 100";
+
+    });
+
+}
+
+
+
+
+
+// アカウント作成
+
+function createAccount(){
+
+    const nameInput = document.getElementById("nameInput");
+
+    const iconInput = document.getElementById("iconInput");
+
+
+    if(nameInput.value.trim() === ""){
+        return;
+    }
+
+
+    name = nameInput.value;
+
+
+    localStorage.setItem("name", name);
+
+
+
+    if(iconInput.files[0]){
+
+        const reader = new FileReader();
+
+
+        reader.onload = function(){
+
+            icon = reader.result;
+
+
+            localStorage.setItem("icon", icon);
+
+
+            showSNS();
+
+        }
+
+
+        reader.readAsDataURL(iconInput.files[0]);
+
+
+    }else{
+
+        showSNS();
+
+    }
+
+}
+
+
+
+
+
+// SNS表示
+
+function showSNS(){
+
+    document.getElementById("account").style.display="none";
+
+    document.getElementById("sns").style.display="block";
+
+
+    document.getElementById("username").textContent =
+    "ログイン中：" + name;
+
+
+    setupCounter();
+
+
+    loadPosts();
+
+}
+
+
+
+
+
+if(name){
+
+    showSNS();
+
+}
+
+
+
+
+
+// 投稿表示
+
+function loadPosts(){
+
+    const posts = document.getElementById("posts");
+
+
+    posts.innerHTML="";
+
+
+    savedPosts.forEach(post=>{
+
+
+        const div = document.createElement("div");
+
+
+        div.className="post";
+
+
+        div.innerHTML = `
+
+        <img class="icon" src="${post.icon}">
+
+
+        <div>
+
+        <div class="name">${post.name}</div>
+
+        <div>${post.text}</div>
+
+        <div class="time">${post.time}</div>
+
+
+        ${post.name === name ? 
+        `<button class="delete-button" onclick="showDelete(${savedPosts.indexOf(post)})">削除</button>` 
+        : ""}
+
+
+        </div>
+
+        `;
+
+
+        posts.appendChild(div);
+
+
+    });
+
+
+}
+
+
+
+
+
+// 投稿
+
+function postMessage(){
+
+
+    const input = document.getElementById("message");
+
+
+    if(input.value.trim()===""){
+        return;
+    }
+
+
+    if(input.value.length > 100){
+
+        alert("投稿は100文字までです！");
+
+        return;
+
+    }
+
+
+
+    savedPosts.unshift({
+
+        name:name,
+
+        icon:icon,
+
+        text:input.value,
+
+
+        time:new Date().toLocaleTimeString([],{
+
+            hour:"2-digit",
+
+            minute:"2-digit"
+
+        })
+
+    });
+
+
+
+    localStorage.setItem(
+
+        "posts",
+
+        JSON.stringify(savedPosts)
+
+    );
+
+
+
+    input.value="";
+
+
+    document.getElementById("count").textContent="0 / 100";
+
+
+    loadPosts();
+
+
+}
+
+
+
+
+
+// Enter投稿
+
+function enterPost(event){
+
+    if(event.key === "Enter"){
+
+        postMessage();
+
+    }
+
+}
+
+
+
+
+
+// 削除確認表示
+
+function showDelete(index){
+
+    deleteIndex = index;
+
+
+    document.getElementById("deleteBox").style.display="block";
+
+}
+
+
+
+
+
+// 削除する
+
+function yesDelete(){
+
+    deletePost(deleteIndex);
+
+
+    document.getElementById("deleteBox").style.display="none";
+
+}
+
+
+
+
+
+// キャンセル
+
+function noDelete(){
+
+    document.getElementById("deleteBox").style.display="none";
+
+}
+
+
+
+
+
+// 削除処理
+
+function deletePost(index){
+
+
+    savedPosts.splice(index,1);
+
+
+    localStorage.setItem(
+
+        "posts",
+
+        JSON.stringify(savedPosts)
+
+    );
+
+
+    loadPosts();
+
+}
+
+
+
+</script>
+
+
+</body>
+
+</html>
